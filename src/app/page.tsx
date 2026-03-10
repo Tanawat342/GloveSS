@@ -73,6 +73,17 @@ export default function SmartGlovePage() {
     setReceivedText('การเชื่อมต่อหลุด กรุณาเชื่อมต่อใหม่');
   };
 
+  const disconnectBluetooth = async () => {
+    if (device && device.gatt?.connected) {
+      device.gatt.disconnect();
+      console.log("Disconnected successfully");
+    }
+    // Always cleanup state even if device is already gone
+    setIsConnected(false);
+    setDevice(null);
+    setReceivedText("ตัดการเชื่อมต่อแล้ว");
+  };
+
   const connectBluetooth = async () => {
     if (isConnecting) return;
     setIsConnecting(true);
@@ -155,42 +166,56 @@ export default function SmartGlovePage() {
       </div>
 
       {/* Control Section */}
-      <footer className="relative z-10 w-full flex flex-col items-center space-y-8">
-        <button
-          onClick={connectBluetooth}
-          disabled={isConnected || isConnecting}
-          className={`
-            group relative px-10 py-5 rounded-2xl text-xl font-bold transition-all duration-500
-            ${isConnected 
-              ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 cursor-default ring-4 ring-emerald-500/5' 
-              : 'bg-white text-black hover:bg-blue-50 active:scale-95 shadow-[0_20px_50px_rgba(255,255,255,0.1)]'
-            }
-          `}
-        >
-          {isConnected ? (
-            <span className="flex items-center gap-4">
-              <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20 ml-[-4px]">
-                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+      <footer className="relative z-10 w-full flex flex-col items-center space-y-6">
+        <div className="flex flex-col sm:flex-row items-center gap-4">
+          <button
+            onClick={connectBluetooth}
+            disabled={isConnected || isConnecting}
+            className={`
+              group relative px-10 py-5 rounded-2xl text-xl font-bold transition-all duration-500
+              ${isConnected 
+                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 cursor-default ring-4 ring-emerald-500/5' 
+                : 'bg-white text-black hover:bg-blue-50 active:scale-95 shadow-[0_20px_50px_rgba(255,255,255,0.1)]'
+              }
+            `}
+          >
+            {isConnected ? (
+              <span className="flex items-center gap-4">
+                <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                </svg>
+                เชื่อมต่อสำเร็จ
+              </span>
+            ) : isConnecting ? (
+              <span className="flex items-center gap-4">
+                <svg className="animate-spin h-5 w-5 text-black" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                กำลังเชื่อมต่อ...
+              </span>
+            ) : (
+              <span className="flex items-center gap-4">
+                <svg className="w-6 h-6 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071a9.05 9.05 0 0112.728 0m-16.97-5.657a13.57 13.57 0 0119.142 0"></path>
+                </svg>
+                เริ่มเชื่อมต่อถุงมือ
+              </span>
+            )}
+          </button>
+
+          {isConnected && (
+            <button
+              onClick={disconnectBluetooth}
+              className="px-10 py-5 rounded-2xl text-xl font-bold bg-red-500/10 text-red-500 border border-red-500/30 hover:bg-red-500/20 active:scale-95 transition-all duration-300 flex items-center gap-4"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
               </svg>
-              เชื่อมต่อสำเร็จ
-            </span>
-          ) : isConnecting ? (
-            <span className="flex items-center gap-4">
-              <svg className="animate-spin h-5 w-5 text-black" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-              กำลังเชื่อมต่อ...
-            </span>
-          ) : (
-            <span className="flex items-center gap-4">
-              <svg className="w-6 h-6 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071a9.05 9.05 0 0112.728 0m-16.97-5.657a13.57 13.57 0 0119.142 0"></path>
-              </svg>
-              เริ่มเชื่อมต่อถุงมือ
-            </span>
+              ตัดการเชื่อมต่อ
+            </button>
           )}
-        </button>
+        </div>
 
         <div className="flex items-center space-x-6 text-slate-500 font-medium">
           <div className="flex items-center space-x-2">
