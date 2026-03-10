@@ -18,9 +18,9 @@ export default function SmartGlovePage() {
 
   // Mapping raw signals from glove to Thai sentences
   const labelMap: Record<string, string> = {
-    "HELLO": "สวัสดีครับ ผมชื่อฟลุ๊ค",
+    "HELLO": "สวัสดีครับ ",
     "HUNGRY": "ตอนนี้ผมเริ่มหิวข้าวแล้วครับ",
-    "THANKS": "ขอบคุณมากครับที่ช่วยเหลือ",
+    "THANKS": "ขอบคุณมากครับ",
     "TOILET": "ขออนุญาตไปห้องน้ำหน่อยครับ"
   };
 
@@ -81,9 +81,7 @@ export default function SmartGlovePage() {
     try {
       const bluetoothDevice = await navigator.bluetooth.requestDevice({
         filters: [
-          { name: 'SmartGlove' },
-          { name: 'Fluke_SmartGlove' }, // Added as secondary filter based on history
-          { namePrefix: 'SmartGlove' }
+          { name: 'SmartGlove' } // Must match Arduino name exactly
         ],
         optionalServices: [SERVICE_UUID],
       });
