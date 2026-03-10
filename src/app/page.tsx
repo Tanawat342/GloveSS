@@ -78,11 +78,29 @@ export default function SmartGlovePage() {
       device.gatt.disconnect();
       console.log("Disconnected successfully");
     }
-    // Always cleanup state even if device is already gone
+    // Always cleanup state
     setIsConnected(false);
     setDevice(null);
     setReceivedText("ตัดการเชื่อมต่อแล้ว");
   };
+
+  // Auto-disconnect cleanup when page is closed or refreshed
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (device && device.gatt?.connected) {
+        device.gatt.disconnect();
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      if (device && device.gatt?.connected) {
+        device.gatt.disconnect();
+      }
+    };
+  }, [device]);
 
   const connectBluetooth = async () => {
     if (isConnecting) return;
