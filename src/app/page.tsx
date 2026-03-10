@@ -16,6 +16,14 @@ export default function SmartGlovePage() {
   const SERVICE_UUID = '4fafc201-1fb5-459e-8fcc-c5c9c331914b';
   const CHARACTERISTIC_UUID = 'beb5483e-36e1-4688-b7f5-ea07361b26a8';
 
+  // Mapping raw signals from glove to Thai sentences
+  const labelMap: Record<string, string> = {
+    "HELLO": "สวัสดีครับ ผมชื่อฟลุ๊ค",
+    "HUNGRY": "ตอนนี้ผมเริ่มหิวข้าวแล้วครับ",
+    "THANKS": "ขอบคุณมากครับที่ช่วยเหลือ",
+    "TOILET": "ขออนุญาตไปห้องน้ำหน่อยครับ"
+  };
+
   const speak = (text: string) => {
     if (!text || text === lastSpokenRef.current) return;
     
@@ -23,7 +31,7 @@ export default function SmartGlovePage() {
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = 'th-TH';
     utterance.rate = 1.0;
-    utterance.pitch = 1.1; // Slightly higher pitch for clarity
+    utterance.pitch = 1.1;
     
     utterance.onend = () => {
       lastSpokenRef.current = text;
@@ -34,20 +42,26 @@ export default function SmartGlovePage() {
   };
 
   const handleCharacteristicValueChanged = (event: Event) => {
-    const value = (event.target as BluetoothRemoteGATTCharacteristic).value;
+    const characteristic = event.target as BluetoothRemoteGATTCharacteristic;
+    const value = characteristic.value;
     if (!value) return;
 
     const decoder = new TextDecoder('utf-8');
-    const text = decoder.decode(value).trim();
+    const rawText = decoder.decode(value).trim().toUpperCase(); // Normalize to uppercase for mapping
     
-    if (text) {
-      setReceivedText(text);
-      speak(text);
+    // Translate using map or fallback to raw text
+    const displayMessage = labelMap[rawText] || rawText;
+    
+    if (rawText) {
+      setReceivedText(displayMessage);
+      speak(displayMessage);
       
       // Visual feedback pulse
       if (pulseRef.current) {
+        pulseRef.current.classList.remove('animate-ping');
+        // Trigger reflow to restart animation
+        void pulseRef.current.offsetWidth;
         pulseRef.current.classList.add('animate-ping');
-        setTimeout(() => pulseRef.current?.classList.remove('animate-ping'), 500);
       }
     }
   };
