@@ -2,11 +2,16 @@
 
 import { useState, useEffect, useRef } from 'react';
 
+// Animation variants and styles
+const glassStyle = "bg-white/10 backdrop-blur-2xl border border-white/20 shadow-[0_8px_32px_0_rgba(31,38,135,0.37)]";
+
 export default function SmartGlovePage() {
   const [device, setDevice] = useState<BluetoothDevice | null>(null);
   const [receivedText, setReceivedText] = useState<string>('รอการเชื่อมต่อ...');
   const [isConnected, setIsConnected] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false);
   const lastSpokenRef = useRef<string>('');
+  const pulseRef = useRef<HTMLDivElement>(null);
 
   const SERVICE_UUID = '4fafc201-1fb5-459e-8fcc-c5c9c331914b';
   const CHARACTERISTIC_UUID = 'beb5483e-36e1-4688-b7f5-ea07361b26a8';
@@ -14,13 +19,11 @@ export default function SmartGlovePage() {
   const speak = (text: string) => {
     if (!text || text === lastSpokenRef.current) return;
     
-    // Stop any current speech to avoid overlapping
     window.speechSynthesis.cancel();
-
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = 'th-TH';
     utterance.rate = 1.0;
-    utterance.pitch = 1.0;
+    utterance.pitch = 1.1; // Slightly higher pitch for clarity
     
     utterance.onend = () => {
       lastSpokenRef.current = text;
@@ -40,6 +43,12 @@ export default function SmartGlovePage() {
     if (text) {
       setReceivedText(text);
       speak(text);
+      
+      // Visual feedback pulse
+      if (pulseRef.current) {
+        pulseRef.current.classList.add('animate-ping');
+        setTimeout(() => pulseRef.current?.classList.remove('animate-ping'), 500);
+      }
     }
   };
 
@@ -51,9 +60,17 @@ export default function SmartGlovePage() {
   };
 
   const connectBluetooth = async () => {
+    if (isConnecting) return;
+    setIsConnecting(true);
+    setReceivedText('กำลังค้นหาอุปกรณ์...');
+
     try {
       const bluetoothDevice = await navigator.bluetooth.requestDevice({
-        filters: [{ name: 'SmartGlove' }],
+        filters: [
+          { name: 'SmartGlove' },
+          { name: 'Fluke_SmartGlove' }, // Added as secondary filter based on history
+          { namePrefix: 'SmartGlove' }
+        ],
         optionalServices: [SERVICE_UUID],
       });
 
@@ -70,70 +87,114 @@ export default function SmartGlovePage() {
       characteristic.addEventListener('characteristicvaluechanged', handleCharacteristicValueChanged);
 
       setIsConnected(true);
-      setReceivedText('เชื่อมต่อสำเร็จ พร้อมรับข้อมูล');
+      setReceivedText('เชื่อมต่อแล้ว พร้อมใช้งาน');
     } catch (error) {
       console.error('Bluetooth connection failed', error);
-      setReceivedText('การเชื่อมต่อล้มเหลว');
+      setReceivedText('ไม่พบอุปกรณ์ หรือยกเลิกการเชื่อมต่อ');
+    } finally {
+      setIsConnecting(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white flex flex-col items-center justify-center p-6 space-y-12">
-      {/* Glossy Header BG effect */}
-      <div className="absolute inset-0 bg-gradient-to-br from-blue-600/20 to-purple-600/20 pointer-events-none" />
-      
-      <div className="z-10 text-center space-y-4">
-        <h1 className="text-2xl font-light tracking-widest text-blue-400 uppercase">
-          SmartGlove Assistant
+    <main className="relative min-h-screen bg-[#020617] overflow-hidden flex flex-col items-center justify-between py-12 px-6">
+      {/* Dynamic Background Elements */}
+      <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-600/20 rounded-full blur-[120px] animate-pulse" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-purple-600/20 rounded-full blur-[120px]" />
+      <div className="absolute top-[20%] right-[10%] w-[30%] h-[30%] bg-cyan-500/10 rounded-full blur-[100px]" />
+
+      {/* Header Section */}
+      <header className="relative z-10 text-center">
+        <div className="mb-4 inline-block px-4 py-1 rounded-full bg-blue-500/10 border border-blue-500/20">
+          <span className="text-xs font-bold tracking-[0.2em] text-blue-400 uppercase">
+            Assistive Technology v2.0
+          </span>
+        </div>
+        <h1 className="text-4xl md:text-5xl font-black bg-clip-text text-transparent bg-gradient-to-r from-white via-blue-100 to-blue-300">
+          Smart Glove
         </h1>
-        <div className="h-1 w-24 bg-blue-500 mx-auto rounded-full shadow-[0_0_10px_rgba(59,130,246,0.6)]" />
+        <p className="mt-2 text-slate-400 font-medium tracking-wide">เเปลภาษามือเป็นเสียงพูดอัจฉริยะ</p>
+      </header>
+
+      {/* Hero Display Card */}
+      <div className="relative z-10 w-full max-w-5xl group">
+        <div className={`absolute -inset-1 bg-gradient-to-r ${isConnected ? 'from-cyan-500 to-blue-600' : 'from-slate-700 to-slate-800'} rounded-[2.5rem] blur opacity-25 group-hover:opacity-50 transition duration-1000`}></div>
+        <div className={`relative ${glassStyle} rounded-[2.5rem] p-10 md:p-20 flex flex-col items-center justify-center min-h-[400px] transition-all duration-500`}>
+          
+          <div className="absolute top-8 left-8 flex items-center space-x-2">
+            <div ref={pulseRef} className={`w-3 h-3 rounded-full ${isConnected ? 'bg-cyan-500' : 'bg-slate-500 opacity-50'}`}></div>
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Live Status</span>
+          </div>
+
+          <div className="text-center space-y-8">
+            <span className="text-sm font-semibold text-blue-400/60 uppercase tracking-widest">คำพูดที่ได้รับ</span>
+            <div className="min-h-[120px] flex items-center justify-center">
+              <h2 className={`text-6xl md:text-8xl lg:text-9xl font-bold tracking-tight transition-all duration-500 ${isConnected ? 'text-white' : 'text-white/20'}`}>
+                {receivedText}
+              </h2>
+            </div>
+            {isConnected && (
+              <div className="flex justify-center">
+                <div className="h-1 w-32 bg-gradient-to-r from-transparent via-cyan-500 to-transparent rounded-full shadow-[0_0_15px_rgba(6,182,212,0.5)] animate-pulse"></div>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
-      {/* Hero Text display */}
-      <div className="z-10 w-full max-w-4xl bg-white/5 border border-white/10 rounded-3xl p-12 backdrop-blur-xl shadow-2xl flex flex-col items-center justify-center min-h-[300px] transition-all duration-500 hover:border-blue-500/30">
-        <p className={`text-6xl md:text-9xl font-bold text-center transition-all duration-300 ${isConnected ? 'text-white' : 'text-white/20'}`}>
-          {receivedText}
-        </p>
-      </div>
-
-      {/* Connection Button */}
-      <div className="z-10">
+      {/* Control Section */}
+      <footer className="relative z-10 w-full flex flex-col items-center space-y-8">
         <button
           onClick={connectBluetooth}
-          disabled={isConnected}
+          disabled={isConnected || isConnecting}
           className={`
-            px-12 py-6 rounded-full text-2xl font-semibold tracking-tight transition-all duration-300
+            group relative px-10 py-5 rounded-2xl text-xl font-bold transition-all duration-500
             ${isConnected 
-              ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/50 cursor-default' 
-              : 'bg-blue-600 hover:bg-blue-500 hover:scale-105 active:scale-95 shadow-[0_0_30px_rgba(37,99,235,0.4)] hover:shadow-[0_0_50px_rgba(37,99,235,0.6)]'
+              ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 cursor-default ring-4 ring-emerald-500/5' 
+              : 'bg-white text-black hover:bg-blue-50 active:scale-95 shadow-[0_20px_50px_rgba(255,255,255,0.1)]'
             }
           `}
         >
           {isConnected ? (
-            <span className="flex items-center gap-3">
-              <span className="relative flex h-4 w-4">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-4 w-4 bg-emerald-500"></span>
-              </span>
-              เชื่อมต่อแล้ว
+            <span className="flex items-center gap-4">
+              <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20 ml-[-4px]">
+                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+              </svg>
+              เชื่อมต่อสำเร็จ
+            </span>
+          ) : isConnecting ? (
+            <span className="flex items-center gap-4">
+              <svg className="animate-spin h-5 w-5 text-black" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              กำลังเชื่อมต่อ...
             </span>
           ) : (
-            'เชื่อมต่อถุงมือ'
+            <span className="flex items-center gap-4">
+              <svg className="w-6 h-6 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071a9.05 9.05 0 0112.728 0m-16.97-5.657a13.57 13.57 0 0119.142 0"></path>
+              </svg>
+              เริ่มเชื่อมต่อถุงมือ
+            </span>
           )}
         </button>
-      </div>
 
-      {/* Footer Info */}
-      <div className="z-10 text-white/40 text-sm font-light">
-        Web Bluetooth API & Web Speech Synthesis
-      </div>
+        <div className="flex items-center space-x-6 text-slate-500 font-medium">
+          <div className="flex items-center space-x-2">
+            <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+            <span className="text-xs uppercase tracking-widest">Bluetooth LE</span>
+          </div>
+          <div className="flex items-center space-x-2">
+            <span className="w-2 h-2 rounded-full bg-purple-500"></span>
+            <span className="text-xs uppercase tracking-widest">Thai Voice Engine</span>
+          </div>
+        </div>
+      </footer>
 
-      <style jsx global>{`
-        body {
-          overflow: hidden;
-          background: #020617;
-        }
-      `}</style>
-    </div>
+      {/* Noise background overlay */}
+      <div className="fixed inset-0 pointer-events-none bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-overlay"></div>
+    </main>
   );
 }
+
