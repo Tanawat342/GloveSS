@@ -75,13 +75,24 @@ export default function SmartGlovePage() {
 
   const disconnectBluetooth = async () => {
     if (device && device.gatt?.connected) {
-      device.gatt.disconnect();
-      console.log("Disconnected successfully");
+      try {
+        await device.gatt.disconnect();
+        console.log("Manual disconnection successful");
+      } catch (err) {
+        console.error("Disconnection error:", err);
+      }
     }
-    // Always cleanup state
-    setIsConnected(false);
+    
+    // Logic to help "undiscoverable" issue:
+    // 1. Clear all states
     setDevice(null);
-    setReceivedText("ตัดการเชื่อมต่อแล้ว");
+    setIsConnected(false);
+    setReceivedText("ตัดการเชื่อมต่อเเล้ว (กรุณารอ 2 วินาทีเเล้วต่อใหม่)");
+    
+    // 2. Small delay to let ESP32 restart Advertising
+    setTimeout(() => {
+      setReceivedText("ระบบพร้อมเชื่อมต่อใหม่");
+    }, 2000);
   };
 
   // Auto-disconnect cleanup when page is closed or refreshed
